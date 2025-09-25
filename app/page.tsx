@@ -1,0 +1,198 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import AuthBar from "@/components/auth-bar";
+import { useSession } from "next-auth/react";
+
+type Product = {
+  id: string;
+  name: string;
+  capacity: string;
+  price: string; // Prisma Decimal -> serialized as string
+  images: { id: string; url: string }[];
+};
+
+export default function Home() {
+  const { data: session } = useSession();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [form, setForm] = useState({ username: "", phone: "", email: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/products");
+        const data = await res.json();
+        if (mounted) setProducts(data.products || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (mounted) setLoadingProducts(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to create user");
+      setMessage("User created successfully. You can now request an order.");
+      setForm({ username: "", phone: "", email: "" });
+    } catch (err: any) {
+      setMessage(err.message || "Something went wrong");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen text-foreground">
+      <main className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {session && (
+          <section className="lg:col-span-3">
+            <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90 p-6 shadow-sm mb-8">
+              <h2 className="text-2xl font-semibold mb-2">Quick Actions</h2>
+              <p className="text-sm text-muted-foreground mb-4">Choose where you want to go.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                <a href="/invoice" className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 text-center shadow-sm">New Invoice</a>
+                <a href="/stock" className="rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 text-center shadow-sm">Stock</a>
+                <a href="/journal" className="rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-4 py-3 text-center shadow-sm">Journal</a>
+                <a href="/customers" className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-4 py-3 text-center shadow-sm">Customers</a>
+                <a href="/reports" className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 text-center shadow-sm">Reports</a>
+              </div>
+            </div>
+          </section>
+        )}
+        <section className="lg:col-span-3">
+          {!session && (
+          <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/90 dark:bg-zinc-900/90 p-6 shadow-sm mb-8">
+            <h2 className="text-2xl font-semibold mb-2">Welcome</h2>
+            <p className="text-sm text-muted-foreground mb-4">Choose your role to continue, or log in.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <a href="/login?role=customer" className="rounded-xl border border-black/10 dark:border-white/10 p-4 hover:bg-black/5 dark:hover:bg-white/10 transition">
+                <h3 className="font-medium">Customer</h3>
+                <p className="text-sm text-muted-foreground">View products only.</p>
+              </a>
+              <a href="/login?role=representative" className="rounded-xl border border-black/10 dark:border-white/10 p-4 hover:bg-black/5 dark:hover:bg-white/10 transition">
+                <h3 className="font-medium">Representative</h3>
+                <p className="text-sm text-muted-foreground">Access invoice entry after login.</p>
+              </a>
+              <a href="/login?role=manager" className="rounded-xl border border-black/10 dark:border-white/10 p-4 hover:bg-black/5 dark:hover:bg-white/10 transition">
+                <h3 className="font-medium">Manager</h3>
+                <p className="text-sm text-muted-foreground">Full permissions and dashboard.</p>
+              </a>
+            </div>
+          </div>
+          )}
+        </section>
+        <section id="products" className="lg:col-span-2">
+          <div className="flex items-end justify-between mb-4">
+            <div>
+              <h2 className="text-2xl font-semibold">Products</h2>
+              <p className="text-sm text-muted-foreground">Browse available products.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {loadingProducts ? (
+              <div className="col-span-full text-muted-foreground">Loading products…</div>
+            ) : products.length === 0 ? (
+              <div className="col-span-full text-muted-foreground">No products yet. Admin can add products from the dashboard.</div>
+            ) : (
+              products.map((p) => (
+                <div key={p.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
+                  {p.images?.[0]?.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.images[0].url} alt={p.name} className="w-full h-36 object-cover rounded-t-xl" />
+                  ) : (
+                    <div className="w-full h-36 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-t-xl" />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-medium leading-tight">{p.name}</h3>
+                    <p className="text-sm text-muted-foreground">Capacity: {p.capacity}</p>
+                    <p className="mt-2 font-semibold">{Number(p.price).toLocaleString(undefined, { style: "currency", currency: "EGP" })}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section id="new-user" className="lg:col-span-1">
+          <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+            <h2 className="text-xl font-semibold mb-1">Request Order Authority</h2>
+            <p className="text-sm text-muted-foreground mb-6">Create your user. An admin can grant permissions.</p>
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1" htmlFor="username">Username</label>
+                <input
+                  id="username"
+                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.username}
+                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                  minLength={3}
+                  maxLength={50}
+                  required
+                  placeholder="e.g., john_doe"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" htmlFor="phone">Phone</label>
+                <input
+                  id="phone"
+                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.phone}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  minLength={5}
+                  maxLength={30}
+                  required
+                  placeholder="e.g., +1 555 123 4567"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  type="email"
+                  className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
+              <button
+                disabled={submitting}
+                className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Submitting…" : "Create User"}
+              </button>
+            </form>
+            {message && (
+              <p className="mt-4 text-sm text-muted-foreground">{message}</p>
+            )}
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-black/5 dark:border-white/10 py-8 mt-10">
+        <div className="max-w-6xl mx-auto px-6 text-sm text-muted-foreground">
+          © {new Date().getFullYear()} Projection. All rights reserved.
+        </div>
+      </footer>
+    </div>
+  );
+}

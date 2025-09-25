@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --bg-image: url('https://images.unsplash.com/photo-1500937386664-56b2a5f3b1b6?q=80&w=1920&auto=format&fit=crop'); /* agriculture field */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --bg-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1920&auto=format&fit=crop'); /* dark farmland */
+  }
+}
+
+body {
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
+    var(--bg-image);
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  color: var(--foreground);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Print styles */
+@media print {
+  /* Remove page background overlays for clear printing */
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Hide header/navigation and interactive controls */
+  header, nav, footer, button, [role="button"], a[href][class*="rounded"], .no-print {
+    display: none !important;
+  }
+  /* Expand main content */
+  main, .print-area, .max-w-6xl, .rounded-xl {
+    border: none !important;
+    box-shadow: none !important;
+  }
+  /* Tables look better in print */
+  table { page-break-inside: auto; border-collapse: collapse; width: 100%; }
+  tr    { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+}
