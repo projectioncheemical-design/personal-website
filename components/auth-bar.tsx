@@ -22,13 +22,6 @@ export default function AuthBar() {
         >
           Log in
         </a>
-        <button
-          onClick={() => signIn("credentials", { email: "elsiaad.motawee@gmail.com", password: "0000", callbackUrl: "/admin" })}
-          className="rounded-lg bg-black text-white dark:bg-white dark:text-black px-3 py-1.5 text-sm hover:opacity-90"
-          title="One-click Admin Login"
-        >
-          Admin Login
-        </button>
       </div>
     );
   }

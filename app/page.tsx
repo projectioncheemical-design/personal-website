@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AuthBar from "@/components/auth-bar";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 type Product = {
   id: string;
@@ -108,15 +108,31 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             {loadingProducts ? (
-              <div className="col-span-full text-muted-foreground">Loading products…</div>
+              <>
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm animate-pulse">
+                    <div className="w-full h-36 bg-black/5 dark:bg-white/10 rounded-t-xl" />
+                    <div className="p-4 space-y-2">
+                      <div className="h-4 w-2/3 bg-black/5 dark:bg-white/10 rounded" />
+                      <div className="h-3 w-1/2 bg-black/5 dark:bg-white/10 rounded" />
+                      <div className="h-5 w-1/3 bg-black/5 dark:bg-white/10 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </>
             ) : products.length === 0 ? (
               <div className="col-span-full text-muted-foreground">No products yet. Admin can add products from the dashboard.</div>
             ) : (
               products.map((p) => (
                 <div key={p.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow">
                   {p.images?.[0]?.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.images[0].url} alt={p.name} className="w-full h-36 object-cover rounded-t-xl" />
+                    <Image
+                      src={p.images[0].url}
+                      alt={p.name}
+                      width={1000}
+                      height={144}
+                      className="w-full h-36 object-cover rounded-t-xl"
+                    />
                   ) : (
                     <div className="w-full h-36 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-t-xl" />
                   )}

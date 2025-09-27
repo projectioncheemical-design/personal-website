@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "node scripts/seed.js",
-    "vercel-build": "prisma generate && next build --turbopack"
+    "prisma:deploy": "prisma migrate deploy",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build --turbopack"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

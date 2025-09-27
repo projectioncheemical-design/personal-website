@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useToast } from "@/components/toast-provider";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 type Product = {
   id: string;
@@ -11,9 +13,9 @@ type Product = {
   stockQty: number;
   images: { id: string; url: string }[];
 };
-
 export default function StockPage() {
   const { data: session } = useSession();
+  const { toast } = useToast();
   // @ts-expect-error custom role on session
   const role: string | undefined = session?.user?.role;
   const canEdit = useMemo(() => role === "ADMIN" || role === "MANAGER", [role]);
@@ -29,11 +31,15 @@ export default function StockPage() {
     setError(null);
     try {
       const res = await fetch("/api/products");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to load products");
-      setProducts(data.products || []);
+      const text = await res.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch {}
+      if (!res.ok) throw new Error((data && data.error) || "Failed to load products");
+      setProducts((data && data.products) || []);
     } catch (e: any) {
-      setError(e.message || "Failed to load");
+      const msg = e.message || "Failed to load";
+      setError(msg);
+      toast({ title: "خطأ في التحميل", description: msg, variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -43,11 +49,16 @@ export default function StockPage() {
     try {
       setUploadingId(p.id);
       const res = await fetch("/api/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, imageUrl: null }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const resText = await res.text();
+      let data: any = null;
+      try { data = resText ? JSON.parse(resText) : null; } catch {}
+      if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
       await load();
+      toast({ title: "تم الحذف", description: `تم حذف صورة المنتج ${p.name}`, variant: "success" });
     } catch (e: any) {
-      setError(e.message || "Remove failed");
+      const msg = e.message || "Remove failed";
+      setError(msg);
+      toast({ title: "فشل حذف الصورة", description: msg, variant: "error" });
     } finally {
       setUploadingId(null);
     }
@@ -59,15 +70,23 @@ export default function StockPage() {
       const fd = new FormData();
       fd.append("file", file);
       const up = await fetch("/api/upload", { method: "POST", body: fd });
-      const upData = await up.json();
-      if (!up.ok) throw new Error(upData?.error || `HTTP ${up.status}`);
-      const imageUrl: string = upData.url;
+      const upText = await up.text();
+      let upData: any = null;
+      try { upData = upText ? JSON.parse(upText) : null; } catch {}
+      if (!up.ok) throw new Error((upData && upData.error) || `Upload failed (HTTP ${up.status})`);
+      const imageUrl: string = upData?.url;
+      if (!imageUrl) throw new Error("No URL returned from upload");
       const res = await fetch("/api/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, imageUrl }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const resText = await res.text();
+      let data: any = null;
+      try { data = resText ? JSON.parse(resText) : null; } catch {}
+      if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
       await load();
+      toast({ title: "تم الرفع", description: `تم رفع صورة المنتج ${p.name}`, variant: "success" });
     } catch (e: any) {
-      setError(e.message || "Upload failed");
+      const msg = e.message || "Upload failed";
+      setError(msg);
+      toast({ title: "فشل رفع الصورة", description: msg, variant: "error" });
     } finally {
       setUploadingId(null);
     }
@@ -82,11 +101,16 @@ export default function StockPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: p.id, ...patch }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const resText = await res.text();
+      let data: any = null;
+      try { data = resText ? JSON.parse(resText) : null; } catch {}
+      if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
       await load();
+      toast({ title: "تم التحديث", description: `تم حفظ تعديلات المنتج ${p.name}`, variant: "success" });
     } catch (e: any) {
-      setError(e.message || "Update failed");
+      const msg = e.message || "Update failed";
+      setError(msg);
+      toast({ title: "فشل الحفظ", description: msg, variant: "error" });
     }
   }
 
@@ -105,12 +129,17 @@ export default function StockPage() {
           imageUrl: form.imageUrl || undefined,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const resText = await res.text();
+      let data: any = null;
+      try { data = resText ? JSON.parse(resText) : null; } catch {}
+      if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
       setForm({ name: "", capacity: "", price: "", stockQty: "", imageUrl: "" });
       await load();
+      toast({ title: "تمت الإضافة", description: "تم إضافة المنتج بنجاح", variant: "success" });
     } catch (e: any) {
-      setError(e.message || "Failed to create product");
+      const msg = e.message || "Failed to create product";
+      setError(msg);
+      toast({ title: "فشل الإضافة", description: msg, variant: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -140,15 +169,31 @@ export default function StockPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          <div className="col-span-full text-muted-foreground">Loading…</div>
+          <>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900 animate-pulse">
+                <div className="w-full h-36 bg-black/5 dark:bg-white/10 rounded-t-xl" />
+                <div className="p-4 space-y-2">
+                  <div className="h-4 w-2/3 bg-black/5 dark:bg-white/10 rounded" />
+                  <div className="h-3 w-1/2 bg-black/5 dark:bg-white/10 rounded" />
+                  <div className="h-5 w-1/3 bg-black/5 dark:bg-white/10 rounded" />
+                </div>
+              </div>
+            ))}
+          </>
         ) : products.length === 0 ? (
           <div className="col-span-full text-muted-foreground">No products yet.</div>
         ) : (
           products.map(p => (
             <div key={p.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900">
               {p.images?.[0]?.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.images[0].url} alt={p.name} className="w-full h-36 object-cover rounded-t-xl" />
+                <Image
+                  src={p.images[0].url}
+                  alt={p.name}
+                  width={1000}
+                  height={144}
+                  className="w-full h-36 object-cover rounded-t-xl"
+                />
               ) : (
                 <div className="w-full h-36 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-t-xl" />
               )}
@@ -178,10 +223,17 @@ export default function StockPage() {
                         if (!confirm("Delete this product? This cannot be undone.")) return;
                         try {
                           const res = await fetch("/api/products", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id }) });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                          const resText = await res.text();
+                          let data: any = null;
+                          try { data = resText ? JSON.parse(resText) : null; } catch {}
+                          if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
                           await load();
-                        } catch (e:any) { setError(e.message || "Delete failed"); }
+                          toast({ title: "تم الحذف", description: `تم حذف المنتج ${p.name}`, variant: "success" });
+                        } catch (e:any) {
+                          const msg = e.message || "Delete failed";
+                          setError(msg);
+                          toast({ title: "فشل الحذف", description: msg, variant: "error" });
+                        }
                       }}
                     >Delete</button>
                   )}

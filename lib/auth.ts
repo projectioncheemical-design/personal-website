@@ -1,5 +1,6 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import type { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcrypt";
@@ -15,44 +16,70 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: "Email & Password",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
-
-        // Single Admin short-circuit: accept admin email + password '0000' (or ADMIN_PASSWORD if provided)
-        if (
-          credentials.email.toLowerCase() === ADMIN_EMAIL.toLowerCase() &&
-          (credentials.password === SINGLE_ADMIN_PASSWORD || (ADMIN_PASSWORD && credentials.password === ADMIN_PASSWORD))
-        ) {
-          // Ensure admin exists in DB
-          let admin = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
-          if (!admin) {
-            admin = await prisma.user.create({
-              data: {
-                email: ADMIN_EMAIL,
-                name: ADMIN_NAME,
-                role: "ADMIN",
-              },
-            });
-          }
-          return { id: admin.id, email: admin.email!, name: admin.name || "Admin", role: admin.role } as any;
-        }
-
-        // Otherwise, disallow non-admin logins for now
-        return null;
+        const email = credentials.email.toLowerCase();
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user || !user.passwordHash) return null;
+        const ok = await bcrypt.compare(credentials.password, user.passwordHash);
+        if (!ok) return null;
+        return { id: user.id, email: user.email!, name: user.name || undefined, role: user.role } as any;
+      },
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      allowDangerousEmailAccountLinking: true,
+      profile(profile) {
+        // Let PrismaAdapter create/find the user; role defaults to REQUESTER from Prisma schema
+        return {
+          id: profile.sub as string,
+          name: profile.name || profile.email?.split("@")[0] || "User",
+          email: profile.email,
+          image: (profile as any).picture,
+        } as any;
       },
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      try {
+        const email = (user as any)?.email?.toLowerCase?.();
+        const adminEmail = (process.env.ADMIN_EMAIL || "elsiaad.motawee@gmail.com").toLowerCase();
+        if (email && email === adminEmail) {
+          const existing = await prisma.user.findUnique({ where: { email } });
+          if (existing && existing.role !== "ADMIN") {
+            await prisma.user.update({ where: { id: existing.id }, data: { role: "ADMIN" } });
+          }
+        }
+      } catch (e) {
+        console.error("NextAuth signIn admin promotion error", e);
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         (token as any).role = (user as any).role;
         // NextAuth sets token.sub = user.id, but ensure we preserve it
         (token as any).id = (user as any).id ?? (token as any).sub;
+      }
+      // Ensure we always carry latest role from DB (handles promotions post-signin)
+      try {
+        const userId = (token as any).id ?? (token as any).sub;
+        if (userId) {
+          const dbUser = await prisma.user.findUnique({ where: { id: String(userId) }, select: { id: true, role: true } });
+          if (dbUser) {
+            (token as any).id = dbUser.id;
+            (token as any).role = dbUser.role;
+          }
+        }
+      } catch (e) {
+        // ignore silently; token still works
       }
       return token;
     },

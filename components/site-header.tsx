@@ -27,19 +27,29 @@ export default function SiteHeader() {
             ) : null}
             <span className="text-xl font-semibold tracking-tight">Projection</span>
           </a>
-          {session && (
-            <nav className="hidden sm:flex gap-2 text-sm">
-              <a href="/invoice" className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5">New Invoice</a>
-              <a href="/stock" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5">Stock</a>
-              <a href="/journal" className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5">Journal</a>
-              <a href="/customers" className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5">Customers</a>
-              <a href="/reports" className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5">Reports</a>
-              {/* @ts-expect-error custom role */}
-              {(session.user as any)?.role && ((session.user as any).role === 'ADMIN' || (session.user as any).role === 'MANAGER') && (
-                <a href="/settings" className="rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white px-3 py-1.5">Settings</a>
-              )}
-            </nav>
-          )}
+          <nav className="hidden sm:flex gap-2 text-sm">
+            <a href="/shop" className="rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-3 py-1.5 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white">Shop</a>
+            <a href="/cart" className="rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-3 py-1.5 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-white">Cart</a>
+            {session && (
+              <>
+                {/* @ts-expect-error custom role */}
+                {((session.user as any)?.role === 'EMPLOYEE' || (session.user as any)?.role === 'MANAGER' || (session.user as any)?.role === 'ADMIN') && (
+                  <a href="/invoice" className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5">New Invoice</a>
+                )}
+                {/* @ts-expect-error custom role */}
+                {((session.user as any)?.role === 'MANAGER' || (session.user as any)?.role === 'ADMIN') && (
+                  <>
+                    <a href="/stock" className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5">Stock</a>
+                    <a href="/journal" className="rounded-lg bg-sky-600 hover:bg-sky-700 text-white px-3 py-1.5">Journal</a>
+                    <a href="/customers" className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5">Customers</a>
+                    <a href="/reports" className="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5">Reports</a>
+                    <a href="/admin/users" className="rounded-lg bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5">Users</a>
+                    <a href="/settings" className="rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white px-3 py-1.5">Settings</a>
+                  </>
+                )}
+              </>
+            )}
+          </nav>
         </div>
         <AuthBar />
       </div>

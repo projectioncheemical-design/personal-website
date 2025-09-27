@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useToast } from "@/components/toast-provider";
 
 export default function SettingsForm() {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
@@ -14,12 +16,16 @@ export default function SettingsForm() {
     setError(null);
     try {
       const res = await fetch("/api/media", { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-      setLogo(data.logo || null);
-      setBackground(data.background || null);
+      const text = await res.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch {}
+      if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+      setLogo((data && data.logo) || null);
+      setBackground((data && data.background) || null);
     } catch (e: any) {
-      setError(e.message || "Failed to load settings");
+      const msg = e.message || "Failed to load settings";
+      setError(msg);
+      toast({ title: "فشل تحميل الإعدادات", description: msg, variant: "error" });
     } finally {
       setLoading(false);
     }
@@ -34,15 +40,23 @@ export default function SettingsForm() {
       const fd = new FormData();
       fd.append("file", file);
       const up = await fetch("/api/upload", { method: "POST", body: fd });
-      const upData = await up.json();
-      if (!up.ok) throw new Error(upData?.error || `Upload HTTP ${up.status}`);
-      const url: string = upData.url;
+      const upText = await up.text();
+      let upData: any = null;
+      try { upData = upText ? JSON.parse(upText) : null; } catch {}
+      if (!up.ok) throw new Error((upData && upData.error) || `Upload HTTP ${up.status}`);
+      const url: string | undefined = upData?.url;
+      if (!url) throw new Error("No URL returned from upload");
       const set = await fetch("/api/media", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, url }) });
-      const setData = await set.json();
-      if (!set.ok) throw new Error(setData?.error || `Media HTTP ${set.status}`);
+      const setText = await set.text();
+      let setData: any = null;
+      try { setData = setText ? JSON.parse(setText) : null; } catch {}
+      if (!set.ok) throw new Error((setData && setData.error) || `Media HTTP ${set.status}`);
       await load();
+      toast({ title: kind === "LOGO" ? "تم تحديث الشعار" : "تم تحديث الخلفية", description: "تم الحفظ بنجاح", variant: "success" });
     } catch (e: any) {
-      setError(e.message || "Failed to save");
+      const msg = e.message || "Failed to save";
+      setError(msg);
+      toast({ title: "فشل الحفظ", description: msg, variant: "error" });
     } finally {
       setSaving(null);
     }
