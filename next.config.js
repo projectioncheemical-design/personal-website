@@ -1,17 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable cache
+  generateEtags: false,
+  
+  // Disable X-Powered-By header
+  poweredByHeader: false,
+  
   // Enable React's strict mode
   reactStrictMode: true,
   
-  // Image domains
+  // Image optimization
   images: {
-    domains: ['openweathermap.org', 'res.cloudinary.com'],
+    domains: [
+      'openweathermap.org',
+      'res.cloudinary.com',
+      'lh3.googleusercontent.com',
+      'avatars.githubusercontent.com'
+    ],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '**',
       },
     ],
+    minimumCacheTTL: 60, // 1 minute
   },
   
   // Disable TypeScript checking during build
@@ -27,10 +39,33 @@ const nextConfig = {
   // Environment variables that should be available on the client-side
   env: {
     NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL,
+    NEXT_PUBLIC_SITE_URL: process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000',
   },
   
-  // Enable source maps in production for debugging
-  productionBrowserSourceMaps: true,
+  // Enable SWC minification
+  swcMinify: true,
+  
+  // Configure page revalidation (ISR)
+  experimental: {
+    // Enable server actions
+    serverActions: true,
+  },
+  
+  // Disable static optimization to prevent caching
+  output: 'standalone',
+  
+  // Disable static page generation cache
+  onDemandEntries: {
+    // Period (in ms) where the server will keep pages in the buffer
+    maxInactiveAge: 25 * 1000,
+    // Number of pages that should be kept simultaneously without being disposed
+    pagesBufferLength: 2,
+  },
+  
+  // Disable static optimization for all pages
+  generateBuildId: async () => 'build-' + Date.now(),
 };
 
 // Only require keys in production
