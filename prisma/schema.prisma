@@ -6,8 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "sqlite"
+  url       = "file:./dev.db"
+  directUrl = "file:./dev.db"
 }
 
 // Roles in the system
@@ -25,6 +26,12 @@ enum MediaKind {
   PRODUCT
 }
 
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String?
@@ -36,99 +43,135 @@ model User {
   emailVerified DateTime?
 
   // Relations
-  accounts      Account[]
-  sessions      Session[]
-  customers     Customer[]   @relation("UserCustomers")
-  invoices      Invoice[]
-  journals      Journal[]
+  accounts         Account[]
+  sessions         Session[]
+  customers        Customer[]        @relation("UserCustomers")
+  invoices         Invoice[]
+  journals         Journal[]
+  purchaseRequests PurchaseRequest[] @relation("UserPurchaseRequests")
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([date])
 }
 
 model Customer {
-  id         String   @id @default(cuid())
-  name       String
-  email      String?
-  phone      String?
-  owner      User     @relation("UserCustomers", fields: [ownerId], references: [id])
-  ownerId    String
-  invoices   Invoice[]
-  totalDebt  Decimal  @default(0)
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  owner     User      @relation("UserCustomers", fields: [ownerId], references: [id])
+  ownerId   String
+  invoices  Invoice[]
+  totalDebt Decimal   @default(0)
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  journals   Journal[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  journals         Journal[]
+  purchaseRequests PurchaseRequest[] @relation("CustomerPurchaseRequests")
+
+  @@index([ownerId, name])
+  @@index([name])
 }
 
 model Product {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  capacity  String
-  price     Decimal
-  stockQty  Int      @default(0)
-  images    Media[]
+  id           String                @id @default(cuid())
+  name         String                @unique
+  capacity     String
+  price        Decimal
+  stockQty     Int                   @default(0)
+  notes        String?
+  images       Media[]
   invoiceItems InvoiceItem[]
+  requestItems PurchaseRequestItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Invoice {
-  id          String        @id @default(cuid())
-  serial      String        @unique
-  date        DateTime      @default(now())
-  customer    Customer      @relation(fields: [customerId], references: [id])
-  customerId  String
-  user        User          @relation(fields: [userId], references: [id])
-  userId      String
-  items       InvoiceItem[]
-  total       Decimal
-  collection  Decimal       @default(0)
-  balance     Decimal
+  id         String        @id @default(cuid())
+  serial     String        @unique
+  date       DateTime      @default(now())
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  customerId String
+  user       User          @relation(fields: [userId], references: [id])
+  userId     String
+  items      InvoiceItem[]
+  total      Decimal
+  collection Decimal       @default(0)
+  balance    Decimal
 
   journalEntries Journal[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model InvoiceItem {
-  id        String   @id @default(cuid())
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  id        String  @id @default(cuid())
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
   invoiceId String
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
   productId String
   capacity  String
   price     Decimal
   quantity  Int
   total     Decimal
+
+  @@index([invoiceId])
+  @@index([productId])
 }
 
 model Journal {
-  id          String   @id @default(cuid())
-  date        DateTime @default(now())
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
-  invoiceId   String   @unique
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
-  customer    Customer @relation(fields: [customerId], references: [id])
-  customerId  String
-  total       Decimal
-  collection  Decimal
-  balance     Decimal
+  id         String   @id @default(cuid())
+  date       DateTime @default(now())
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  invoiceId  String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+  total      Decimal
+  collection Decimal
+  balance    Decimal
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Media {
-  id        String    @id @default(cuid())
-  url       String
-  kind      MediaKind @default(GALLERY)
-  product   Product?  @relation(fields: [productId], references: [id])
-  productId String?
+  id          String    @id @default(cuid())
+  url         String
+  kind        MediaKind @default(GALLERY)
+  blurDataUrl String?
+  product     Product?  @relation(fields: [productId], references: [id])
+  productId   String?
 
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
+}
+
+model PurchaseRequest {
+  id          String                @id @default(cuid())
+  createdAt   DateTime              @default(now())
+  status      RequestStatus         @default(PENDING)
+  requester   User                  @relation("UserPurchaseRequests", fields: [requesterId], references: [id])
+  requesterId String
+  customer    Customer?             @relation("CustomerPurchaseRequests", fields: [customerId], references: [id])
+  customerId  String?
+  items       PurchaseRequestItem[]
+  note        String?
+}
+
+model PurchaseRequestItem {
+  id             String          @id @default(cuid())
+  request        PurchaseRequest @relation(fields: [requestId], references: [id])
+  requestId      String
+  product        Product         @relation(fields: [productId], references: [id])
+  productId      String
+  quantity       Int
+  priceAtRequest Decimal
 }
 
 // NextAuth models (from Prisma Adapter)
@@ -162,7 +205,7 @@ model Session {
 
 model VerificationToken {
   identifier String
-  token      String @unique
+  token      String   @unique
   expires    DateTime
 
   @@unique([identifier, token])

@@ -37,11 +37,19 @@ export async function POST(req: Request) {
     }
 
     // Process with sharp -> webp 1000px width
-    const processed = await sharp(buffer)
-      .rotate()
+    const image = sharp(buffer).rotate();
+    const processed = await image
       .resize({ width: 1000, withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer();
+
+    // Generate tiny blur placeholder (base64) ~ 16px width
+    const tiny = await image
+      .clone()
+      .resize({ width: 16, withoutEnlargement: true })
+      .webp({ quality: 50 })
+      .toBuffer();
+    const blurDataUrl = `data:image/webp;base64,${tiny.toString("base64")}`;
 
     // Prefer Cloudinary in all environments; required on Vercel
     const hasCloudinary = !!(
@@ -73,7 +81,7 @@ export async function POST(req: Request) {
         });
         const url: string | undefined = uploaded?.secure_url || uploaded?.url;
         if (!url) throw new Error("Cloudinary did not return a URL");
-        return NextResponse.json({ url }, { status: 201 });
+        return NextResponse.json({ url, blurDataUrl }, { status: 201 });
       } catch (e: any) {
         console.error("Cloudinary upload error", e?.message || e);
         return NextResponse.json({ error: "Cloudinary upload failed" }, { status: 500 });
@@ -97,7 +105,7 @@ export async function POST(req: Request) {
     const fname = `${base}-${stamp}.webp`;
     const outPath = path.join(uploadsDir, fname);
     await writeFile(outPath, processed);
-    return NextResponse.json({ url: `/uploads/${fname}` }, { status: 201 });
+    return NextResponse.json({ url: `/uploads/${fname}`, blurDataUrl }, { status: 201 });
   } catch (e: any) {
     console.error("/api/upload error", e?.message || e);
     return NextResponse.json({ error: e?.message || "Upload failed" }, { status: 500 });

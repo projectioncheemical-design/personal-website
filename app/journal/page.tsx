@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { useSession } from "next-auth/react";
 
 type Entry = {
@@ -26,6 +27,7 @@ export default function JournalPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Record<string, string>>({});
+  const egpFmt = useMemo(() => new Intl.NumberFormat("en-EG", { style: "currency", currency: "EGP" }), []);
 
   async function load() {
     setLoading(true);
@@ -107,11 +109,11 @@ export default function JournalPage() {
         ) : (
           entries.map(e => (
             <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-black/5 dark:border-white/5" key={e.id}>
-              <div className="col-span-2 text-sm">{new Date(e.date).toLocaleString()}</div>
+              <div className="col-span-2 text-sm">{format(new Date(e.date), "dd/MM/yyyy HH:mm")}</div>
               <div className="col-span-2 text-sm">{e.invoice?.serial || "-"}</div>
               <div className="col-span-3 text-sm">{e.customer?.name || "-"}</div>
               <div className="col-span-2 text-sm">{e.user?.name || e.user?.email || "-"}</div>
-              <div className="col-span-1 text-right text-sm">{Number(e.total).toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
+              <div className="col-span-1 text-right text-sm">{egpFmt.format(Number(e.total))}</div>
               <div className="col-span-1 text-right text-sm">
                 {canEdit ? (
                   <div className="flex items-center gap-2 justify-end">
@@ -124,17 +126,17 @@ export default function JournalPage() {
                     <button onClick={()=>saveCollection(e.id)} className="rounded bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 text-xs">Save</button>
                   </div>
                 ) : (
-                  Number(e.collection).toLocaleString(undefined,{style:"currency",currency:"EGP"})
+                  egpFmt.format(Number(e.collection))
                 )}
               </div>
-              <div className="col-span-1 text-right text-sm">{Number(e.balance).toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
+              <div className="col-span-1 text-right text-sm">{egpFmt.format(Number(e.balance))}</div>
             </div>
           ))
         )}
         <div className="flex justify-end gap-6 px-4 py-3 text-sm font-medium">
-          <div>Total: {Number(totals.total).toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
-          <div>Collected: {Number(totals.collection).toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
-          <div>Balance: {Number(totals.balance).toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
+          <div>Total: {egpFmt.format(Number(totals.total))}</div>
+          <div>Collected: {egpFmt.format(Number(totals.collection))}</div>
+          <div>Balance: {egpFmt.format(Number(totals.balance))}</div>
         </div>
       </div>
     </div>

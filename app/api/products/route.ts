@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 export async function GET() {
   try {
     const products = await prisma.product.findMany({
+      where: { stockQty: { gt: 0 } },
       orderBy: { name: "asc" },
       include: { images: true },
     });
@@ -52,8 +53,10 @@ const UpdateProductSchema = z.object({
   capacity: z.string().min(1).optional(),
   price: z.number().positive().optional(),
   stockQty: z.number().int().min(0).optional(),
+  notes: z.string().max(5000).nullable().optional(),
   // accept absolute or relative URLs
   imageUrl: z.string().min(1).nullable().optional(),
+  imageBlurDataUrl: z.string().min(1).nullable().optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -72,7 +75,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { id, name, capacity, price, stockQty, imageUrl } = parsed.data;
+  const { id, name, capacity, price, stockQty, notes, imageUrl, imageBlurDataUrl } = parsed.data;
   try {
     const updated = await prisma.$transaction(async (tx) => {
       if (imageUrl !== undefined) {
@@ -86,7 +89,8 @@ export async function PATCH(req: Request) {
           ...(capacity !== undefined ? { capacity } : {}),
           ...(price !== undefined ? { price } : {}),
           ...(stockQty !== undefined ? { stockQty } : {}),
-          ...(imageUrl ? { images: { create: [{ url: imageUrl, kind: "PRODUCT" }] } } : {}),
+          ...(notes !== undefined ? { notes } : {}),
+          ...(imageUrl ? { images: { create: [{ url: imageUrl, kind: "PRODUCT", blurDataUrl: imageBlurDataUrl || undefined }] } } : {}),
         },
         include: { images: true },
       });
@@ -104,8 +108,10 @@ const CreateProductSchema = z.object({
   capacity: z.string().min(1),
   price: z.number().positive(),
   stockQty: z.number().int().min(0).default(0),
+  notes: z.string().max(5000).optional(),
   // accept absolute or relative URLs
   imageUrl: z.string().min(1).optional(),
+  imageBlurDataUrl: z.string().min(1).optional(),
 });
 
 export async function POST(req: Request) {
@@ -125,7 +131,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { name, capacity, price, stockQty, imageUrl } = parsed.data;
+  const { name, capacity, price, stockQty, notes, imageUrl, imageBlurDataUrl } = parsed.data;
   try {
     const created = await prisma.product.create({
       data: {
@@ -133,7 +139,8 @@ export async function POST(req: Request) {
         capacity,
         price,
         stockQty,
-        images: imageUrl ? { create: [{ url: imageUrl, kind: "PRODUCT" }] } : undefined,
+        ...(notes ? { notes } : {}),
+        images: imageUrl ? { create: [{ url: imageUrl, kind: "PRODUCT", blurDataUrl: imageBlurDataUrl || undefined }] } : undefined,
       },
       include: { images: true },
     });

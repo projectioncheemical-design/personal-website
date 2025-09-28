@@ -11,7 +11,8 @@ type Product = {
   capacity: string;
   price: number | string;
   stockQty: number;
-  images: { id: string; url: string }[];
+  notes?: string | null;
+  images: { id: string; url: string; blurDataUrl?: string }[];
 };
 export default function StockPage() {
   const { data: session } = useSession();
@@ -75,8 +76,9 @@ export default function StockPage() {
       try { upData = upText ? JSON.parse(upText) : null; } catch {}
       if (!up.ok) throw new Error((upData && upData.error) || `Upload failed (HTTP ${up.status})`);
       const imageUrl: string = upData?.url;
+      const imageBlurDataUrl: string | undefined = upData?.blurDataUrl;
       if (!imageUrl) throw new Error("No URL returned from upload");
-      const res = await fetch("/api/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, imageUrl }) });
+      const res = await fetch("/api/products", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: p.id, imageUrl, imageBlurDataUrl }) });
       const resText = await res.text();
       let data: any = null;
       try { data = resText ? JSON.parse(resText) : null; } catch {}
@@ -94,7 +96,7 @@ export default function StockPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function onUpdate(p: Product, patch: { name?: string; capacity?: string; price?: number; stockQty?: number }) {
+  async function onUpdate(p: Product, patch: { name?: string; capacity?: string; price?: number; stockQty?: number; notes?: string | null }) {
     try {
       const res = await fetch("/api/products", {
         method: "PATCH",
@@ -178,6 +180,24 @@ export default function StockPage() {
                   <div className="h-3 w-1/2 bg-black/5 dark:bg-white/10 rounded" />
                   <div className="h-5 w-1/3 bg-black/5 dark:bg-white/10 rounded" />
                 </div>
+                {/* Notes for managers */}
+                <div className="mt-3">
+                  <div className="text-xs text-muted-foreground">Notes</div>
+                  {canEdit ? (
+                    <textarea
+                      className="w-full min-h-24 rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1 text-sm"
+                      defaultValue={p.notes || ""}
+                      placeholder="اكتب ملاحظات حول المنتج هنا…"
+                      onBlur={(e)=>{
+                        const val = e.currentTarget.value;
+                        if (val !== (p.notes || "")) onUpdate(p, { notes: val || null });
+                      }}
+                      maxLength={5000}
+                    />
+                  ) : (
+                    p.notes ? <div className="text-sm whitespace-pre-wrap">{p.notes}</div> : <div className="text-sm text-muted-foreground">—</div>
+                  )}
+                </div>
               </div>
             ))}
           </>
@@ -186,37 +206,39 @@ export default function StockPage() {
         ) : (
           products.map(p => (
             <div key={p.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-zinc-900">
-              {p.images?.[0]?.url ? (
-                <Image
-                  src={p.images[0].url}
-                  alt={p.name}
-                  width={1000}
-                  height={144}
-                  className="w-full h-36 object-cover rounded-t-xl"
-                />
-              ) : (
-                <div className="w-full h-36 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-t-xl" />
-              )}
+              <a href={`/products/${p.id}`}>
+                {p.images?.[0]?.url ? (
+                  <Image
+                    src={p.images[0].url}
+                    alt={p.name}
+                    width={1000}
+                    height={144}
+                    className="w-full h-36 object-cover rounded-t-xl"
+                    placeholder={p.images[0].blurDataUrl ? "blur" : undefined}
+                    blurDataURL={p.images[0].blurDataUrl || undefined}
+                  />
+                ) : (
+                  <div className="w-full h-36 bg-gradient-to-br from-slate-200 to-slate-100 dark:from-zinc-800 dark:to-zinc-900 rounded-t-xl" />
+                )}
+              </a>
               <div className="p-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1">
                     <div className="text-xs text-muted-foreground">Name</div>
                     {canEdit ? (
                       <input
-                        type="text"
+                        className="w-full rounded border border-black/10 dark:border-white/10 bg-transparent px-2 py-1"
                         defaultValue={p.name}
-                        className="w-full rounded-lg border border-black/10 dark:border-white/10 bg-transparent px-2 py-1 text-sm"
                         onBlur={(e)=>{
-                          const val=e.currentTarget.value.trim();
+                          const val = e.currentTarget.value.trim();
                           if (val && val !== p.name) onUpdate(p, { name: val });
                         }}
                       />
                     ) : (
-                      <h3 className="font-medium">{p.name}</h3>
+                      <a href={`/products/${p.id}`} className="font-medium hover:underline">{p.name}</a>
                     )}
                   </div>
-                  {canEdit && (
-                    <button
+                  <button
                       type="button"
                       className="rounded-lg border border-red-200 text-red-700 hover:bg-red-50 px-3 py-1.5 text-sm"
                       onClick={async()=>{
@@ -236,7 +258,6 @@ export default function StockPage() {
                         }
                       }}
                     >Delete</button>
-                  )}
                 </div>
                 <div className="mt-2">
                   <div className="text-xs text-muted-foreground">Capacity</div>

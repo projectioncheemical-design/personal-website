@@ -1,9 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --bg-image: url('https://images.unsplash.com/photo-1500937386664-56b2a5f3b1b6?q=80&w=1920&auto=format&fit=crop'); /* agriculture field */
+  --primary: #2e7d32;
+  --primary-dark: #1b5e20;
+  --secondary: #7cb342;
+  --accent: #ffa000;
+  --background: #f5f5f5;
+  --foreground: #1a1a1a;
+  --card-bg: #ffffff;
+  --card-border: #e0e0e0;
+  --text-muted: #616161;
+  --bg-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1920&auto=format&fit=crop');
+  --header-gradient: linear-gradient(135deg, #1b5e20 0%, #2e7d32 50%, #388e3c 100%);
 }
 
 @theme inline {
@@ -15,23 +23,102 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --bg-image: url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1920&auto=format&fit=crop'); /* dark farmland */
+    --primary: #4caf50;
+    --primary-dark: #388e3c;
+    --secondary: #8bc34a;
+    --accent: #ffc107;
+    --background: #121212;
+    --foreground: #f5f5f5;
+    --card-bg: #1e1e1e;
+    --card-border: #333333;
+    --text-muted: #9e9e9e;
+    --bg-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1920&auto=format&fit=crop&dark');
+    --header-gradient: linear-gradient(135deg, #0d3b0d 0%, #1b5e20 50%, #2e7d32 100%);
   }
 }
 
 body {
   background:
-    linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
+    linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.8)),
     var(--bg-image);
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
   background-repeat: no-repeat;
   color: var(--foreground);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+}
+
+@layer base {
+  @font-face {
+    font-family: 'Cairo';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
+  }
+}
+
+/* Header styles */
+header {
+  background: var(--header-gradient);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Card styles */
+.card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Button styles */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--card-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
 /* Print styles */

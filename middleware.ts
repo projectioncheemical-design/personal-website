@@ -9,11 +9,13 @@ export async function middleware(req: NextRequest) {
   // Paths requiring authentication and roles
   const adminPaths = ["/admin", "/admin/", "/admin/users", "/admin/users/", "/stock", "/stock/", "/settings", "/settings/"];
   const invoicePaths = ["/invoice", "/invoice/"];
+  const repsBase = "/reps/";
 
   const requiresAdmin = adminPaths.some((p) => pathname === p || pathname.startsWith(p));
   const requiresInvoice = invoicePaths.some((p) => pathname === p || pathname.startsWith(p));
+  const isRepProfile = pathname.startsWith(repsBase);
 
-  if (!requiresAdmin && !requiresInvoice) {
+  if (!requiresAdmin && !requiresInvoice && !isRepProfile) {
     return NextResponse.next();
   }
 
@@ -38,6 +40,19 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
+  if (isRepProfile) {
+    // Only ADMIN/MANAGER or the same user can view /reps/:id
+    const parts = pathname.split("/").filter(Boolean); // ["reps", ":id", ...]
+    const paramId = parts[1] || "";
+    const userId = (token as any)?.sub as string | undefined;
+    if (role === "ADMIN" || role === "MANAGER") {
+      return NextResponse.next();
+    }
+    if (userId && paramId && userId === paramId) {
+      return NextResponse.next();
+    }
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 
   return NextResponse.next();
 }
@@ -51,5 +66,6 @@ export const config = {
     "/settings",
     "/settings/:path*",
     "/invoice",
+    "/reps/:path*",
   ],
 };

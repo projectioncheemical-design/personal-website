@@ -19,6 +19,7 @@ export default function Home() {
   const [form, setForm] = useState({ username: "", phone: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [totals, setTotals] = useState<{ invoiceCount: number; salesTotal: number; collectionsTotal: number; balancesTotal: number } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -37,6 +38,25 @@ export default function Home() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      if (!session) { setTotals(null); return; }
+      try {
+        const res = await fetch("/api/users/me/summary", { cache: "no-store" });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+        setTotals({
+          invoiceCount: json.totals?.invoiceCount || 0,
+          salesTotal: Number(json.totals?.salesTotal || 0),
+          collectionsTotal: Number(json.totals?.collectionsTotal || 0),
+          balancesTotal: Number(json.totals?.balancesTotal || 0),
+        });
+      } catch {
+        setTotals(null);
+      }
+    })();
+  }, [session]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +94,26 @@ export default function Home() {
                 <a href="/customers" className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-4 py-3 text-center shadow-sm">Customers</a>
                 <a href="/reports" className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 text-center shadow-sm">Reports</a>
               </div>
+              {totals && (
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-6">
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
+                    <div className="text-sm text-muted-foreground">عدد الفواتير</div>
+                    <div className="text-xl font-semibold">{totals.invoiceCount}</div>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
+                    <div className="text-sm text-muted-foreground">إجمالي المبيعات</div>
+                    <div className="text-xl font-semibold">{totals.salesTotal.toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
+                    <div className="text-sm text-muted-foreground">إجمالي التحصيل</div>
+                    <div className="text-xl font-semibold">{totals.collectionsTotal.toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
+                    <div className="text-sm text-muted-foreground">إجمالي المديونيات</div>
+                    <div className="text-xl font-semibold">{totals.balancesTotal.toLocaleString(undefined,{style:"currency",currency:"EGP"})}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         )}
