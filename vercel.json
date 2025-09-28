@@ -61,8 +61,10 @@
   "github": {
     "silent": true
   },
-  "crons": {
-    "schedule": "0 * * * *",
-    "path": "/api/cron"
-  }
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 * * * *"
+    }
+  ]
 }
