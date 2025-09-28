@@ -7,13 +7,7 @@
     }
   },
   "buildCommand": "npm run vercel-build",
-  "installCommand": "npm install",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
+  "installCommand": "npm install --legacy-peer-deps",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -60,20 +54,10 @@
   ],
   "regions": ["cdg1"],
   "framework": "nextjs",
-  "functions": {
-    "pages/api/**/*.js": {
-      "maxDuration": 10
-    }
-  },
   "public": true,
   "cleanUrls": true,
   "trailingSlash": false,
   "outputDirectory": ".next",
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
-  },
   "github": {
     "silent": true
   },
