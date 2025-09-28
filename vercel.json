@@ -64,8 +64,5 @@
   "crons": {
     "schedule": "0 * * * *",
     "path": "/api/cron"
-  },
-  "analytics": {
-    "enabled": true
   }
 }
