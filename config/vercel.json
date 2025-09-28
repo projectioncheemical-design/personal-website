@@ -6,8 +6,8 @@
       "VERCEL": "1"
     }
   },
-  "buildCommand": "npm run vercel-build",
-  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "cd .. && npm run vercel-build",
+  "installCommand": "cd .. && npm install --legacy-peer-deps",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -57,7 +57,7 @@
   "public": true,
   "cleanUrls": true,
   "trailingSlash": false,
-  "outputDirectory": ".next",
+  "outputDirectory": "../.next",
   "github": {
     "silent": true
   },
