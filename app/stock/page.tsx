@@ -36,9 +36,15 @@ export default function StockPage() {
       let data: any = null;
       try { data = text ? JSON.parse(text) : null; } catch {}
       if (!res.ok) throw new Error((data && data.error) || "Failed to load products");
-      setProducts((data && data.products) || []);
+      
+      // تصفية المنتجات لعرض التي كمية المخزون فيها أكبر من 0
+      const filteredProducts = (data?.products || []).filter((p: Product) => 
+        p.stockQty > 0
+      );
+      
+      setProducts(filteredProducts);
     } catch (e: any) {
-      const msg = e.message || "Failed to load";
+      const msg = e.message || "فشل في تحميل المنتجات";
       setError(msg);
       toast({ title: "خطأ في التحميل", description: msg, variant: "error" });
     } finally {
