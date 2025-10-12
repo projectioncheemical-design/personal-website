@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Projection Store",
-  description: "Products, user onboarding, and invoicing portal",
+  title: "Chemical Design",
+  description: "Chemical Design - Your trusted source for quality products",
 };
 
 export default async function RootLayout({
